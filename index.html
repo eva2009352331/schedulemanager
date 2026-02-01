@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日程管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SheetJS库用于生成XLS文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- 认证页面 -->
+    <div id="authPage" class="auth-page">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1>📅 日程管理系统</h1>
+                <p>您的随身日程助手</p>
+            </div>
+            
+            <!-- 登录表单 -->
+            <div id="loginFormContainer" class="auth-form-container active">
+                <h2>登录</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginPhone">手机号码 <span style="color: red;">*</span></label>
+                        <input type="tel" id="loginPhone" placeholder="请输入手机号码" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码 <span style="color: red;">*</span></label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                    <div class="auth-switch">
+                        <p>还没有账号？ <a href="#" id="showRegisterForm">立即注册</a></p>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- 注册表单 -->
+            <div id="registerFormContainer" class="auth-form-container">
+                <h2>注册</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerUsername">用户名 <span style="color: red;">*</span></label>
+                        <input type="text" id="registerUsername" placeholder="请输入用户名（2-12位）" required minlength="2" maxlength="12">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPhone">手机号码 <span style="color: red;">*</span></label>
+                        <input type="tel" id="registerPhone" placeholder="请输入手机号码" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">密码 <span style="color: red;">*</span></label>
+                        <input type="password" id="registerPassword" placeholder="请输入密码（6-20位）" required minlength="6" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerConfirmPassword">确认密码 <span style="color: red;">*</span></label>
+                        <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" required minlength="6" maxlength="20">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                    <div class="auth-switch">
+                        <p>已有账号？ <a href="#" id="showLoginForm">立即登录</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="appMain" class="app-container" style="display: none;">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <h1>📅 日程管理系统</h1>
+            <div class="header-actions">
+                <div class="user-info">
+                        <span id="currentUsername" style="margin-right: 1rem;"></span>
+                        <span id="currentUserPhone" style="color: #666; font-size: 0.9rem;"></span>
+                        <button id="editUsernameBtn" class="btn btn-sm btn-primary" title="修改用户名">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                <button id="exportBtn" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> 导出日程
+                </button>
+                <button id="dashboardBtn" class="btn btn-primary">
+                    <i class="fas fa-chart-line"></i> 仪表盘
+                </button>
+                <button id="logoutBtn" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 左侧日历 -->
+            <div class="calendar-section">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="btn btn-icon"><i class="fas fa-chevron-left"></i></button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="btn btn-icon"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="weekday">一</div>
+                    <div class="weekday">二</div>
+                    <div class="weekday">三</div>
+                    <div class="weekday">四</div>
+                    <div class="weekday">五</div>
+                    <div class="weekday">六</div>
+                    <div class="weekday">日</div>
+                    <div id="calendarDays" class="days"></div>
+                </div>
+            </div>
+
+            <!-- 右侧内容 -->
+            <div class="schedule-section">
+                <!-- 顶部信息栏 -->
+                <div class="top-info-bar">
+                    <!-- 选中日期信息 -->
+                    <div class="selected-date-info">
+                        <h3 id="selectedDateTitle"></h3>
+                    </div>
+                    <!-- 每日鼓励语 -->
+                    <div class="motivation-card">
+                        <i class="fas fa-lightbulb"></i>
+                        <p id="motivationText">今天也是充满活力的一天，加油！</p>
+                    </div>
+                </div>
+
+                <!-- 添加事项表单 -->
+                <div class="add-event-form">
+                    <h3>添加事项</h3>
+                    <form id="eventForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventName">事项名称 <span style="color: red;">*</span></label>
+                                <input type="text" id="eventName" placeholder="输入事项名称" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="eventTag">事项标签 <span style="color: red;">*</span></label>
+                                <select id="eventTag" required>
+                                    <option value="工作">工作</option>
+                                    <option value="学习">学习</option>
+                                    <option value="生活">生活</option>
+                                    <option value="健身">健身</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                                <div class="custom-tag-section" style="margin-top: 0.5rem;">
+                                    <label style="font-size: 0.75rem; color: #666;">添加自定义标签：</label>
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                                        <input type="text" id="addNewTagName" placeholder="新标签名称" style="flex: 1; padding: 0.5rem; font-size: 0.8rem;">
+                                        <button type="button" id="addNewTagBtn" class="btn btn-primary" style="padding: 0.5rem;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="startTime">开始时间</label>
+                                <input type="time" id="startTime">
+                            </div>
+                            <div class="form-group">
+                                <label for="endTime">结束时间</label>
+                                <input type="time" id="endTime">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 添加事项
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 事项列表 -->
+                <div class="events-list">
+                    <h3>今日事项</h3>
+                    <div id="eventsContainer"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 编辑事项模态框 -->
+        <div id="editEventModal" class="modal">
+            <div class="modal-content edit-modal-content">
+                <div class="modal-header">
+                    <h2>✏️ 编辑事项</h2>
+                    <button class="btn btn-icon" id="closeEditModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEventForm">
+                        <input type="hidden" id="editEventId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editEventName">事项名称 <span style="color: red;">*</span></label>
+                                <input type="text" id="editEventName" placeholder="输入事项名称" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editEventTag">事项标签 <span style="color: red;">*</span></label>
+                                <select id="editEventTag" required>
+                                    <option value="工作">工作</option>
+                                    <option value="学习">学习</option>
+                                    <option value="生活">生活</option>
+                                    <option value="健身">健身</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                                <div class="custom-tag-section" style="margin-top: 0.5rem;">
+                                    <label style="font-size: 0.75rem; color: #666;">添加自定义标签：</label>
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                                        <input type="text" id="newTagName" placeholder="新标签名称" style="flex: 1; padding: 0.5rem; font-size: 0.8rem;">
+                                        <button type="button" id="addCustomTag" class="btn btn-primary" style="padding: 0.5rem;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editStartTime">开始时间</label>
+                                <input type="time" id="editStartTime">
+                            </div>
+                            <div class="form-group">
+                                <label for="editEndTime">结束时间</label>
+                                <input type="time" id="editEndTime">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="button" id="cancelEdit" class="btn btn-secondary">取消</button>
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 仪表盘模态框 -->
+        <div id="dashboardModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📊 日程仪表盘</h2>
+                    <button class="btn btn-icon" id="closeDashboard">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="dashboard-content">
+                    <div class="stat-cards">
+                        <div class="stat-card">
+                            <h3>总事项数</h3>
+                            <p id="totalEvents">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>本周事项</h3>
+                            <p id="weekEvents">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>本月事项</h3>
+                            <p id="monthEvents">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>平均每天</h3>
+                            <p id="avgEvents">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>总时长（小时）</h3>
+                            <p id="totalHours">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>平均时长/天</h3>
+                            <p id="avgHoursPerDay">0</p>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h3>事项类型分布</h3>
+                        <div id="tagDistribution"></div>
+                    </div>
+                    <div class="chart-section" style="margin-top: 1.5rem;">
+                        <h3>事项时间分布</h3>
+                        <div id="timeDistribution"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修改用户名模态框 -->
+        <div id="editUsernameModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>✏️ 修改用户名</h2>
+                    <button class="btn btn-icon" id="closeEditUsernameModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUsernameForm">
+                        <div class="form-group">
+                            <label for="newUsername">新用户名 <span style="color: red;">*</span></label>
+                            <input type="text" id="newUsername" placeholder="请输入新用户名（2-12位）" required minlength="2" maxlength="12">
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="button" id="cancelEditUsername" class="btn btn-secondary">取消</button>
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
